@@ -47,7 +47,6 @@
     function uploadPDF(file) {
         const formData = new FormData();
         formData.append('pdf', file);
-
         progress.style.display = 'block';
         updateProgress(0, "Starting PDF processing...");
 
@@ -69,7 +68,7 @@
                     if (line.startsWith('data: ')) {
                         try {
                             const data = JSON.parse(line.substring(6));
-                            handleServerEvent(data);
+                            handleServerEvent(data, file.name);
                         } catch (e) {
                             console.warn('Non-JSON line:', line);
                         }
@@ -87,13 +86,13 @@
     }
 
     // --- Handle server-sent events ---
-    function handleServerEvent(data) {
+    function handleServerEvent(data, fileName) {
         switch (data.type) {
             case 'progress':
-                updateProgress(data.progress, `PDF Processed: ${data.progress}%`);
+                updateProgress(data.progress,  `${fileName} PDF Processed: ${data.progress}%`);
                 break;
             case 'complete':
-                if (data.success) displayResults(data);
+                if (data.success) displayResults(data, fileName);
                 else showAlert(data.error || 'Processing failed');
                 break;
             case 'error':
@@ -118,13 +117,13 @@
     }
 
     // --- Display processed results ---
-    function displayResults(data) {
+    function displayResults(data, fileName) {
         progress.style.display = 'none';
         const lectures = JSON.parse(data.lectures);
         sectionCount = Object.keys(lectures).length;
 
         sectionCountElement.textContent = sectionCount;
-        let html = '<h5>Results:</h5><div class="list-group">';
+        let html = '<h5>Results of ' + fileName + ':</h5><div class="list-group">';
         Object.entries(lectures).forEach(([title, info]) => {
             html += `
                 <div class="list-group-item rounded-0">

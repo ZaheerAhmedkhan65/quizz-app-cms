@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from "child_process";
 import path from "path";
 import fs from "fs";
+import db from "../config/db.js";
 
 const getHandoutLecures = (req, res) => {
   try {
@@ -115,4 +116,74 @@ const editPDF = (req, res) => {
   }
 };
 
-export { getHandoutLecures, editPDF };
+
+
+const createLectures = async (req, res) => {
+  try {
+    const lectures = req.body;
+    const COURSE_ID = parseInt(req.params.courseId, 10);
+
+    // Validate input
+    if (!lectures || typeof lectures !== "object" || Object.keys(lectures).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or empty lectures data.",
+      });
+    }
+
+    // Fetch all existing lectures for this course
+    const [existingLectures] = await db.execute(
+      `SELECT title FROM lectures WHERE course_id = ?`,
+      [COURSE_ID]
+    );
+
+    const existingTitles = existingLectures.map((lec) => lec.title.trim().toLowerCase());
+
+    // Prepare new values — skip duplicates (same title for same course)
+    const newLectures = Object.entries(lectures).filter(([title, data]) => {
+      if (!data || typeof data.start_page !== "number" || typeof data.end_page !== "number") return false;
+
+      // If lecture has a course_id and it mismatches the one in params → skip
+      if (data.course_id && parseInt(data.course_id, 10) !== COURSE_ID) return false;
+
+      // Skip if the same title already exists for this course
+      return !existingTitles.includes(title.trim().toLowerCase());
+    });
+
+    if (newLectures.length === 0) {
+      return res.status(200).json({
+        success: false,
+        message: "No new lectures to add. All titles already exist for this course.",
+      });
+    }
+
+    // Prepare SQL for bulk insert
+    const values = newLectures.map(([title, { start_page, end_page }]) => {
+      return `(${COURSE_ID}, ${db.escape(title)}, 0, ${start_page}, ${end_page})`;
+    });
+
+    const sql = `
+      INSERT INTO lectures (course_id, title, total_questions, start_page, end_page)
+      VALUES ${values.join(",\n")};
+    `;
+
+    await db.execute(sql);
+
+    res.json({
+      success: true,
+      message: "Lectures created successfully.",
+      inserted_count: newLectures.length,
+      skipped_count: Object.keys(lectures).length - newLectures.length,
+    });
+  } catch (err) {
+    console.error("❌ Error creating lectures:", err);
+    res.status(500).json({
+      success: false,
+      message: "Server error while creating lectures.",
+    });
+  }
+};
+
+
+
+export { getHandoutLecures, editPDF, createLectures };

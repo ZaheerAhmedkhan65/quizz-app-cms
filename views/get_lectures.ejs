@@ -40,6 +40,10 @@
                 <button class="btn btn-success me-2" onclick="copyText()">
                     <i class="fas fa-copy"></i> Copy
                 </button>
+                <!-- Button to Open Modal -->
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#lecturesModal">
+                  Add Lectures
+                </button>
             </div>
         </div>
         <div class="card">
@@ -51,6 +55,109 @@
             </div>
         </div>
     </div>
+
+<!-- Bootstrap Modal -->
+<div class="modal fade" id="lecturesModal" tabindex="-1" aria-labelledby="lecturesModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg" id="lecturesModalDialog">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title" id="lecturesModalLabel">Add Lectures JSON</h5>
+        <div>
+          <!-- Fullscreen toggle button -->
+          <button type="button" class="btn btn-sm btn-outline-secondary me-2" id="toggleFullscreenBtn">
+            <i class="bi bi-arrows-fullscreen"></i>
+          </button>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <!-- POST Form -->
+        <form id="lecturesForm">
+          <div class="mb-3">
+            <label for="courseIdInput" class="form-label">Course ID</label>
+            <input type="number" id="courseIdInput" name="courseId" class="form-control" placeholder="Enter Course ID" required>
+          </div>
+          <div class="mb-3">
+            <label for="lecturesInput" class="form-label">Lectures (JSON format)</label>
+            <textarea id="lecturesInput" name="lectures" class="form-control" rows="18" placeholder='{
+  "Lecture 1": { "start_page": 1, "end_page": 10 },
+  "Lecture 2": { "start_page": 11, "end_page": 20 }
+}' required></textarea>
+          </div>
+          <button type="submit" class="btn btn-success w-100">Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap Icons (add this in your HTML <head> if not already included) -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+
+<script>
+
+     // ===== Handle Fullscreen Toggle =====
+  const modalDialog = document.getElementById('lecturesModalDialog');
+  const toggleBtn = document.getElementById('toggleFullscreenBtn');
+  let isFullscreen = false;
+
+  toggleBtn.addEventListener('click', () => {
+    isFullscreen = !isFullscreen;
+    modalDialog.classList.toggle('modal-fullscreen', isFullscreen);
+    toggleBtn.innerHTML = isFullscreen 
+      ? '<i class="bi bi-fullscreen-exit"></i>' 
+      : '<i class="bi bi-arrows-fullscreen"></i>';
+  });
+
+  document.getElementById('lecturesForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    try {
+      const textarea = document.getElementById('lecturesInput');
+      const courseIdInput = document.getElementById('courseIdInput');
+      const COURSE_ID = courseIdInput.value.trim();
+
+      // Parse JSON safely
+      const lecturesJSON = JSON.parse(textarea.value.trim());
+
+      const response = await fetch(`/create_lectures/${COURSE_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(lecturesJSON)
+      });
+
+      const result = await response.json();
+
+      if(!result.success) {
+        showAlert('❌ Error: ' + (result.message || 'Something went wrong'));
+        return;
+      }
+
+      if (result.success) {
+        showAlert('✅ Lectures created successfully!');
+        textarea.value = '';
+        courseIdInput.value = '';
+
+        // Close modal safely
+        const modalElement = document.getElementById('lecturesModal');
+        let modal = bootstrap.Modal.getInstance(modalElement);
+        if (!modal) {
+          modal = new bootstrap.Modal(modalElement);
+        }
+        modal.hide();
+      } else {
+        alert('❌ Error: ' + (result.message || 'Something went wrong'));
+      }
+    } catch (err) {
+      alert('⚠️ Invalid JSON or network error.');
+      console.error(err);
+    }
+  });
+</script>
+
 
    <script src="/getLecures.js"></script>
 
