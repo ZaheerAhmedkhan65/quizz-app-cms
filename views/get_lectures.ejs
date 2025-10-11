@@ -1,0 +1,57 @@
+<%- include('partials/_header') %>
+    <div class="container">
+        <div class="upload-container">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-animation"></div>
+                <i class="fas fa-file-pdf"></i>
+                <h3>Upload PDF File</h3>
+                <p>Drag & drop your file here or click to browse</p>
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i> Choose File
+                </button>
+                <p><small>Max file size: 100MB • Supported format: PDF</small></p>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf">
+            </div>
+        </div>
+
+        <div id="progress" class="progress-container" style="display: none;">
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                    aria-valuemax="100">
+                    <span class="progress-text">0%</span>
+                </div>
+            </div>
+            <div class="mt-1 fw-bold text-center text-primary">Please wait while processing...</div>
+            <div id="progressStatus" class="progress-status mt-2 text-center text-muted">
+                Pdf is being processed...
+            </div>
+        </div>
+    </div>
+
+    <div class="alert alert-danger mt-3" id="error" style="display: none;"></div>
+
+    <div class="result mt-4 container" id="result" style="display: none;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h3>Processing Completed</h3>
+                <span class="badge bg-success">Sections: <span id="sectionCount">0</span></span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-success me-2" onclick="copyText()">
+                    <i class="fas fa-copy"></i> Copy
+                </button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div id="textContent"></div>
+                <div id="rawData" style="display: none;">
+                    <pre class="mt-3"><code id="rawDataContent"></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+   <script src="/getLecures.js"></script>
+
+    <%- include('partials/_footer') %>

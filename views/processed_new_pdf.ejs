@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF Processed</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px; }
+        .success { 
+            background: #e8f5e8; 
+            padding: 30px; 
+            border-radius: 10px; 
+            text-align: center;
+            border-left: 4px solid #4CAF50;
+        }
+        .btn { 
+            display: inline-block; 
+            padding: 12px 24px; 
+            background: #4CAF50; 
+            color: white; 
+            text-decoration: none; 
+            border-radius: 5px; 
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="success">
+        <h1>✅ PDF Successfully Processed!</h1>
+        <p>Your PDF has been cleaned and is ready for download.</p>
+        <p>Watermarks and unwanted content have been removed.</p>
+        
+        <div style="margin: 30px 0;">
+            <a href="<%= downloadUrl %>" class="btn">Download Cleaned PDF</a>
+            <a href="/" class="btn">Process Another PDF</a>
+        </div>
+        
+        <p><small>The downloaded file: <strong><%= filename %></strong></small></p>
+    </div>
+</body>
+</html>

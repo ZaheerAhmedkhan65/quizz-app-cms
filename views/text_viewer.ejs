@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Extracted Text</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .text-content { 
+            white-space: pre-wrap; 
+            background: #fafafa; 
+            padding: 30px; 
+            border-radius: 5px; 
+            max-height: 70vh; 
+            overflow-y: auto; 
+            border: 1px solid #e0e0e0;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+        }
+        .page-break { 
+            border-bottom: 2px solid #ddd; 
+            margin: 25px 0; 
+            padding-bottom: 15px; 
+            color: #666;
+        }
+        .controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .btn { 
+            padding: 10px 20px; 
+            background: #2196F3; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background: #1976D2; }
+        h1 { color: #333; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📄 Extracted Clean Text</h1>
+        
+        <div class="controls">
+            <button class="btn" onclick="copyText()">Copy All Text</button>
+            <button class="btn" onclick="window.print()">Print Text</button>
+            <a href="/" class="btn">Process Another PDF</a>
+        </div>
+
+        <div class="text-content" id="textContent">
+            <% if (text) { %>
+                <%= text.replace(/--- Page \d+ ---/g, '</div><div class="page-break"><strong>$&</strong></div><div>').replace(/^<div>/, '').replace(/<\/div>$/, '') %>
+            <% } else { %>
+                <p style="text-align: center; color: #666;">No text content available.</p>
+            <% } %>
+        </div>
+    </div>
+
+    <script>
+        function copyText() {
+            const textContent = document.getElementById('textContent').textContent;
+            navigator.clipboard.writeText(textContent)
+                .then(() => alert('All text copied to clipboard!'))
+                .catch(err => alert('Failed to copy text: ' + err));
+        }
+    </script>
+</body>
+</html>

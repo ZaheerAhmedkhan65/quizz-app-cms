@@ -1,0 +1,436 @@
+<%- include('partials/_header') %>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h1><i class="fas fa-file-pdf me-2"></i>PDF Editor</h1>
+                    <p class="mb-0">Remove watermarks, text, and images from your PDF documents</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="tools bg-transparent p-0 shadow-none">
+                        <input type="file" id="fileInput" class="file-input" accept=".pdf">
+                        <button class="btn upload-btn" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-cloud-upload-alt me-2"></i> Upload PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container my-4">
+        <div id="progress" class="progress-container" style="display: none;">
+            <div class="progress">
+                <div class="progress-bar" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0"
+                    aria-valuemax="100">
+                    <span class="progress-text">0%</span>
+                </div>
+            </div>
+            <div class="mt-2 fw-bold text-center text-primary">Processing your PDF...</div>
+            <div id="progressStatus" class="progress-status mt-2 text-center text-muted">
+                Loading document and detecting elements...
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-3 col-md-4 mb-4">
+                <div class="sidebar">
+                    <div class="control-panel">
+                        <h5 class="control-title"><i class="fas fa-mouse-pointer me-2"></i>Selection Mode</h5>
+                        <div class="btn-group-vertical w-100" role="group">
+                            <button type="button" class="btn active" data-mode="watermark">
+                                <i class="fas fa-tint me-2"></i>Watermarks
+                            </button>
+                            <button type="button" class="btn" data-mode="text">
+                                <i class="fas fa-font me-2"></i>Text
+                            </button>
+                            <button type="button" class="btn" data-mode="image">
+                                <i class="fas fa-image me-2"></i>Images
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="control-panel">
+                        <h5 class="control-title"><i class="fas fa-cog me-2"></i>Removal Options</h5>
+                        <div class="option-card">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="removalScope" id="currentPage"
+                                    checked>
+                                <label class="form-check-label" for="currentPage">
+                                    Remove from current page only
+                                </label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="removalScope" id="allPages">
+                                <label class="form-check-label" for="allPages">
+                                    Remove from all pages
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="control-panel">
+                        <h5 class="control-title"><i class="fas fa-edit me-2"></i>Actions</h5>
+                        <button class="btn action-btn remove-btn" id="removeSelected">
+                            <i class="fas fa-trash-alt me-2"></i>Remove Selected
+                        </button>
+                        <button class="btn action-btn download-btn" id="downloadPdf">
+                            <i class="fas fa-download me-2"></i>Download Edited PDF
+                        </button>
+                    </div>
+
+                    <div class="selection-info" id="selectionInfo" style="display: none;">
+                        <h6><i class="fas fa-info-circle me-2"></i>Selection Info</h6>
+                        <p class="mb-1" id="selectedType">Type: Watermark</p>
+                        <p class="mb-1" id="selectedLocation">Location: Page 1</p>
+                        <p class="mb-0" id="selectedContent">Content: CONFIDENTIAL</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-9 col-md-8">
+                <div class="editor-container">
+                    <div class="pdf-viewer" id="pdfViewer">
+                        <div class="empty-state" id="emptyState">
+                            <i class="fas fa-file-pdf"></i>
+                            <h4>No PDF Loaded</h4>
+                            <p>Upload a PDF file to start editing</p>
+                            <button class="btn upload-btn mt-2" onclick="document.getElementById('fileInput').click()">
+                                <i class="fas fa-cloud-upload-alt me-2"></i> Choose PDF File
+                            </button>
+                        </div>
+
+                        <div id="pdfContent" style="display: none;">
+                            <!-- PDF pages will be dynamically inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.14.305/pdf.worker.min.js";
+    </script>
+
+    <script src="/PDF.js"></script>
+    <script>
+        // Global variables
+        let currentSelectionMode = 'watermark';
+        let selectedElement = null;
+        let pdfData = null;
+
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const progressContainer = document.getElementById('progress');
+        const progressBar = document.querySelector('.progress-bar');
+        const progressText = document.querySelector('.progress-text');
+        const progressStatus = document.getElementById('progressStatus');
+        const emptyState = document.getElementById('emptyState');
+        const pdfContent = document.getElementById('pdfContent');
+        const selectionInfo = document.getElementById('selectionInfo');
+        const selectedType = document.getElementById('selectedType');
+        const selectedLocation = document.getElementById('selectedLocation');
+        const selectedContent = document.getElementById('selectedContent');
+        const removeSelectedBtn = document.getElementById('removeSelected');
+        const downloadPdfBtn = document.getElementById('downloadPdf');
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function () {
+            // Selection mode buttons
+            document.querySelectorAll('.btn-group-vertical .btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.btn-group-vertical .btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentSelectionMode = this.getAttribute('data-mode');
+                    updateSelectableElements();
+                });
+            });
+
+            // File input change
+            fileInput.addEventListener('change', function (e) {
+                if (e.target.files.length > 0) {
+                    handleFileUpload(e.target.files[0]);
+                }
+            });
+
+            // Remove selected button
+            removeSelectedBtn.addEventListener('click', removeSelectedElement);
+
+            // Download PDF button
+            downloadPdfBtn.addEventListener('click', downloadEditedPdf);
+        });
+
+        // Handle file upload
+        function handleFileUpload(file) {
+            if (file.type !== 'application/pdf') {
+                alert('Please select a PDF file');
+                return;
+            }
+
+            // Show progress
+            progressContainer.style.display = 'block';
+            emptyState.style.display = 'none';
+            pdfContent.style.display = 'none';
+
+            // Simulate processing
+            simulateProcessing(file);
+        }
+
+        // Simulate PDF processing
+        function simulateProcessing(file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const typedarray = new Uint8Array(e.target.result);
+                renderPdf(typedarray);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function renderPdf(data) {
+    try {
+        progressStatus.textContent = 'Rendering PDF pages...';
+        const pdf = await pdfjsLib.getDocument({ data }).promise;
+
+        pdfContent.innerHTML = '';
+        progressContainer.style.display = 'none';
+        pdfContent.style.display = 'block';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const viewport = page.getViewport({ scale: 1.5 });
+
+            // Create container
+            const pageContainer = document.createElement('div');
+            pageContainer.className = 'pdf-page mb-4 position-relative';
+            pageContainer.id = `page-${i}`;
+
+            // Canvas for rendering
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+            pageContainer.appendChild(canvas);
+
+            // Render page image
+            await page.render({ canvasContext: context, viewport }).promise;
+
+            // === TEXT LAYER ===
+            const textContent = await page.getTextContent();
+            const textLayer = document.createElement('div');
+            textLayer.className = 'textLayer';
+            textLayer.style.position = 'absolute';
+            textLayer.style.top = 0;
+            textLayer.style.left = 0;
+            textLayer.style.width = `${viewport.width}px`;
+            textLayer.style.height = `${viewport.height}px`;
+            textLayer.style.pointerEvents = 'none';
+            pageContainer.appendChild(textLayer);
+
+            textContent.items.forEach(item => {
+                const textDiv = document.createElement('div');
+                const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
+                const fontSize = Math.hypot(tx[2], tx[3]);
+
+                textDiv.textContent = item.str;
+                textDiv.style.position = 'absolute';
+                textDiv.style.left = `${tx[4]}px`;
+                textDiv.style.top = `${viewport.height - tx[5]}px`;
+                textDiv.style.fontSize = `${fontSize}px`;
+                textDiv.style.transform = `scaleX(${tx[0] / fontSize})`;
+                textDiv.className = 'selectable selectable-text';                
+                textDiv.dataset.page = i;
+                textDiv.dataset.type = 'text';
+                textDiv.dataset.content = item.str;
+
+                textDiv.addEventListener('click', e => {
+                    e.stopPropagation();
+                    selectElement(textDiv);
+                });
+
+                textLayer.appendChild(textDiv);
+            });
+
+            // === IMAGE LAYER (simplified) ===
+            const imageLayer = document.createElement('div');
+            imageLayer.className = 'imageLayer';
+            imageLayer.style.position = 'absolute';
+            imageLayer.style.top = 0;
+            imageLayer.style.left = 0;
+            imageLayer.style.width = `${viewport.width}px`;
+            imageLayer.style.height = `${viewport.height}px`;
+            imageLayer.style.pointerEvents = 'auto';
+            pageContainer.appendChild(imageLayer);
+
+            // Render images (approximation)
+            const ops = await page.getOperatorList();
+            for (let j = 0; j < ops.fnArray.length; j++) {
+                if (ops.fnArray[j] === pdfjsLib.OPS.paintImageXObject) {
+                    const imgBox = document.createElement('div');
+                    imgBox.className = 'selectable selectable-image';
+                    imgBox.dataset.page = i;
+                    imgBox.dataset.type = 'image';
+                    imgBox.dataset.content = 'Image object';
+                    imgBox.title = 'Click to select image';
+                    imgBox.style.position = 'absolute';
+                    imgBox.style.border = '2px dashed #007bff';
+                    imgBox.style.cursor = 'pointer';
+                    imgBox.style.top = '20px';
+                    imgBox.style.left = '20px';
+                    imgBox.style.width = '100px';
+                    imgBox.style.height = '60px';
+                    imgBox.addEventListener('click', e => {
+                        e.stopPropagation();
+                        selectElement(imgBox);
+                    });
+                    imageLayer.appendChild(imgBox);
+                }
+            }
+
+            pdfContent.appendChild(pageContainer);
+        }
+
+        showToast('PDF loaded successfully!');
+    } catch (err) {
+        console.error(err);
+        showToast('Failed to load PDF.');
+    }
+}
+
+
+
+function selectElement(el) {
+    // Deselect old selection
+    if (selectedElement) {
+        selectedElement.classList.remove('selected');
+    }
+
+    selectedElement = el;
+    el.classList.add('selected');
+    updateSelectionInfo(el);
+}
+
+function removeSelectedElement() {
+    if (!selectedElement) {
+        alert('Please select a watermark, image, or text to remove.');
+        return;
+    }
+
+    const type = selectedElement.dataset.type;
+    selectedElement.style.display = 'none';
+    showToast(`${type} removed.`);
+    selectedElement = null;
+    selectionInfo.style.display = 'none';
+}
+
+
+        // Update selectable elements based on current mode
+        function updateSelectableElements() {
+            // Remove all existing event listeners and selection classes
+            document.querySelectorAll('.selectable').forEach(el => {
+                el.classList.remove('selected');
+                el.replaceWith(el.cloneNode(true));
+            });
+
+            // Add event listeners to elements of current selection mode
+            document.querySelectorAll(`.selectable[data-type="${currentSelectionMode}"]`).forEach(el => {
+                el.addEventListener('click', function (e) {
+                    e.stopPropagation();
+
+                    // Deselect previous selection
+                    if (selectedElement) {
+                        selectedElement.classList.remove('selected');
+                    }
+
+                    // Select new element
+                    this.classList.add('selected');
+                    selectedElement = this;
+
+                    // Update selection info
+                    updateSelectionInfo(this);
+                });
+            });
+        }
+
+        // Update selection info panel
+        function updateSelectionInfo(element) {
+            const type = element.getAttribute('data-type');
+            const page = element.getAttribute('data-page');
+            const content = element.getAttribute('data-content');
+
+            selectedType.textContent = `Type: ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+            selectedLocation.textContent = `Location: Page ${page}`;
+            selectedContent.textContent = `Content: ${content}`;
+
+            selectionInfo.style.display = 'block';
+        }
+
+        // Remove selected element
+        function removeSelectedElement() {
+            if (!selectedElement) {
+                alert('Please select an element to remove');
+                return;
+            }
+
+            const removalScope = document.querySelector('input[name="removalScope"]:checked').id;
+            const elementType = selectedElement.getAttribute('data-type');
+            const elementContent = selectedElement.getAttribute('data-content');
+            const currentPage = selectedElement.getAttribute('data-page');
+
+            if (removalScope === 'currentPage') {
+                // Remove from current page only
+                selectedElement.remove();
+                showToast(`Removed ${elementType} from page ${currentPage}`);
+            } else {
+                // Remove from all pages
+                document.querySelectorAll(`.selectable[data-type="${elementType}"][data-content="${elementContent}"]`).forEach(el => {
+                    el.remove();
+                });
+                showToast(`Removed ${elementType} from all pages`);
+            }
+
+            // Reset selection
+            selectedElement = null;
+            selectionInfo.style.display = 'none';
+        }
+
+        // Download edited PDF
+        function downloadEditedPdf() {
+            // In a real application, this would generate and download the edited PDF
+            showToast('PDF download started. In a real application, this would be your edited PDF file.');
+
+            // Simulate download
+            setTimeout(() => {
+                showToast('PDF downloaded successfully!');
+            }, 2000);
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            // Create toast element
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 p-3';
+            toast.style.zIndex = '11';
+
+            toast.innerHTML = `
+                <div class="toast show" role="alert">
+                    <div class="toast-header">
+                        <i class="fas fa-info-circle text-primary me-2"></i>
+                        <strong class="me-auto">PDF Editor</strong>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+
+            document.body.appendChild(toast);
+
+            // Auto remove after 3 seconds
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+    </script>
+    <%- include('partials/_footer') %>
