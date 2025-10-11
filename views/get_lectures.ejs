@@ -58,9 +58,9 @@
 
 <!-- Bootstrap Modal -->
 <div class="modal fade" id="lecturesModal" tabindex="-1" aria-labelledby="lecturesModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered modal-lg" id="lecturesModalDialog">
+  <div class="modal-dialog modal-dialog-centered modal-xl" id="lecturesModalDialog">
     <div class="modal-content">
-      
+
       <div class="modal-header">
         <h5 class="modal-title" id="lecturesModalLabel">Add Lectures JSON</h5>
         <div>
@@ -73,44 +73,131 @@
       </div>
 
       <div class="modal-body">
-        <!-- POST Form -->
-        <form id="lecturesForm">
-          <div class="mb-3">
-            <label for="courseIdInput" class="form-label">Course ID</label>
-            <input type="number" id="courseIdInput" name="courseId" class="form-control" placeholder="Enter Course ID" required>
+        <div class="row">
+          <!-- === LEFT PANEL: PDF VIEWER === -->
+          <div class="col-md-7 border-end pe-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <button id="prevPageBtn" class="btn btn-sm btn-outline-primary me-1">&lt;</button>
+                <button id="nextPageBtn" class="btn btn-sm btn-outline-primary">&gt;</button>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                <input type="number" id="pageNumber" class="form-control form-control-sm text-center" min="1" value="1" style="width: 60px;">
+                <span id="totalPages" class="text-muted small">/ 0</span>
+              </div>
+            </div>
+
+            <div id="pdfViewerContainer" class="border rounded p-2 bg-light text-center" style="height: 600px; overflow-y: auto;">
+              <canvas id="pdfCanvas" class="border shadow-sm rounded"></canvas>
+            </div>
           </div>
-          <div class="mb-3">
-            <label for="lecturesInput" class="form-label">Lectures (JSON format)</label>
-            <textarea id="lecturesInput" name="lectures" class="form-control" rows="18" placeholder='{
+
+          <!-- === RIGHT PANEL: FORM === -->
+          <div class="col-md-5 ps-3">
+            <form id="lecturesForm">
+              <div class="mb-3">
+                <label for="courseIdInput" class="form-label">Course ID</label>
+                <input type="number" id="courseIdInput" name="courseId" class="form-control" placeholder="Enter Course ID" required>
+              </div>
+              <div class="mb-3">
+                <label for="lecturesInput" class="form-label">Lectures (JSON format)</label>
+                <textarea id="lecturesInput" name="lectures" class="form-control" rows="18" placeholder='{
   "Lecture 1": { "start_page": 1, "end_page": 10 },
   "Lecture 2": { "start_page": 11, "end_page": 20 }
 }' required></textarea>
+              </div>
+              <button type="submit" class="btn btn-success w-100">Submit</button>
+            </form>
           </div>
-          <button type="submit" class="btn btn-success w-100">Submit</button>
-        </form>
+        </div>
       </div>
+
     </div>
   </div>
 </div>
+<style>
+.fullscreen-modal {
+  width: 100vw !important;
+  max-width: 100% !important;
+  height: 95vh;
+}
+
+.fullscreen-modal .modal-content {
+  height: 100%;
+  overflow: hidden;
+}
+
+#pdfViewerContainer canvas {
+  width: 100%;
+  height: auto;
+}
+</style>
 
 <!-- Bootstrap Icons (add this in your HTML <head> if not already included) -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script>
+let pdfDoc = null;
+let currentPage = 1;
+let totalPages = 0;
+const pdfCanvas = document.getElementById('pdfCanvas');
+const ctx = pdfCanvas.getContext('2d');
 
-     // ===== Handle Fullscreen Toggle =====
-  const modalDialog = document.getElementById('lecturesModalDialog');
-  const toggleBtn = document.getElementById('toggleFullscreenBtn');
-  let isFullscreen = false;
 
-  toggleBtn.addEventListener('click', () => {
-    isFullscreen = !isFullscreen;
-    modalDialog.classList.toggle('modal-fullscreen', isFullscreen);
-    toggleBtn.innerHTML = isFullscreen 
-      ? '<i class="bi bi-fullscreen-exit"></i>' 
-      : '<i class="bi bi-arrows-fullscreen"></i>';
+// Render a specific page
+function renderPage(pageNum) {
+  pdfDoc.getPage(pageNum).then(page => {
+    const viewport = page.getViewport({ scale: 1.5 });
+    pdfCanvas.height = viewport.height;
+    pdfCanvas.width = viewport.width;
+
+    const renderCtx = { canvasContext: ctx, viewport: viewport };
+    page.render(renderCtx);
+    
+    document.getElementById('pageNumber').value = pageNum;
+    document.getElementById('totalPages').textContent = `/ ${totalPages}`;
   });
+}
+
+// Load and display PDF in modal
+async function showPDFInModal(file) {
+  const fileURL = URL.createObjectURL(file);
+  pdfDoc = await pdfjsLib.getDocument(fileURL).promise;
+  totalPages = pdfDoc.numPages;
+  renderPage(currentPage);
+}
+
+// Page navigation buttons
+document.getElementById('prevPageBtn').addEventListener('click', () => {
+  if (currentPage <= 1) return;
+  currentPage--;
+  renderPage(currentPage);
+});
+
+document.getElementById('nextPageBtn').addEventListener('click', () => {
+  if (currentPage >= totalPages) return;
+  currentPage++;
+  renderPage(currentPage);
+});
+
+// Jump to page using input
+document.getElementById('pageNumber').addEventListener('change', (e) => {
+  const page = parseInt(e.target.value);
+  if (page >= 1 && page <= totalPages) {
+    currentPage = page;
+    renderPage(page);
+  } else {
+    e.target.value = currentPage;
+  }
+});
+  // Fullscreen toggle
+document.getElementById('toggleFullscreenBtn').addEventListener('click', function() {
+  const modalDialog = document.getElementById('lecturesModalDialog');
+  modalDialog.classList.toggle('fullscreen-modal');
+  const icon = this.querySelector('i');
+  icon.classList.toggle('bi-arrows-fullscreen');
+  icon.classList.toggle('bi-arrows-collapse');
+});
 
   document.getElementById('lecturesForm').addEventListener('submit', async function (e) {
     e.preventDefault();

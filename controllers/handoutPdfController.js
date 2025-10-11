@@ -162,12 +162,12 @@ const createLectures = async (req, res) => {
       return `(${COURSE_ID}, ${db.escape(title)}, 0, ${start_page}, ${end_page})`;
     });
 
-    const sql = `
-      INSERT INTO lectures (course_id, title, total_questions, start_page, end_page)
-      VALUES ${values.join(",\n")};
-    `;
+    // const sql = `
+    //   INSERT INTO lectures (course_id, title, total_questions, start_page, end_page)
+    //   VALUES ${values.join(",\n")};
+    // `;
 
-    await db.execute(sql);
+    // await db.execute(sql);
 
     res.json({
       success: true,

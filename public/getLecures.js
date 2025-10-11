@@ -12,7 +12,7 @@
     const textContent = document.getElementById('textContent');
     const rawDataContent = document.getElementById('rawDataContent');
     const sectionCountElement = document.getElementById('sectionCount');
-
+    
     // --- Reset all UI states ---
     function resetUI() {
         uploadArea.classList.remove('uploading');
@@ -68,7 +68,7 @@
                     if (line.startsWith('data: ')) {
                         try {
                             const data = JSON.parse(line.substring(6));
-                            handleServerEvent(data, file.name);
+                            handleServerEvent(data, file);
                         } catch (e) {
                             console.warn('Non-JSON line:', line);
                         }
@@ -86,13 +86,13 @@
     }
 
     // --- Handle server-sent events ---
-    function handleServerEvent(data, fileName) {
+    function handleServerEvent(data, file) {
         switch (data.type) {
             case 'progress':
-                updateProgress(data.progress,  `${fileName} PDF Processed: ${data.progress}%`);
+                updateProgress(data.progress,  `${file.name} PDF Processed: ${data.progress}%`);
                 break;
             case 'complete':
-                if (data.success) displayResults(data, fileName);
+                if (data.success) displayResults(data, file);
                 else showAlert(data.error || 'Processing failed');
                 break;
             case 'error':
@@ -117,13 +117,13 @@
     }
 
     // --- Display processed results ---
-    function displayResults(data, fileName) {
+    function displayResults(data, file) {
         progress.style.display = 'none';
         const lectures = JSON.parse(data.lectures);
         sectionCount = Object.keys(lectures).length;
 
         sectionCountElement.textContent = sectionCount;
-        let html = '<h5>Results of ' + fileName + ':</h5><div class="list-group">';
+        let html = '<h5>Results of ' + file.name + ':</h5><div class="list-group">';
         Object.entries(lectures).forEach(([title, info]) => {
             html += `
                 <div class="list-group-item rounded-0">
@@ -140,6 +140,8 @@
         extractedText = data.lectures;
         result.style.display = 'block';
         showAlert('✅ PDF processed successfully!');
+
+        showPDFInModal(file);
     }
 
     // --- Custom Alert ---

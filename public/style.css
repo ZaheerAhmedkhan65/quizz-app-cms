@@ -174,7 +174,7 @@
 
 #customAlert {
     position: fixed;
-    top: 5%;
+    top: 2%;
     left: 50%;
     transform: translateX(-50%) scale(0.8);
     background: #0d6efd;
