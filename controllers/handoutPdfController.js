@@ -19,7 +19,7 @@ const getHandoutLecures = (req, res) => {
     });
 
     const filePath = path.resolve(req.file.path);
-    const python = spawn("python", ["utiles/parse_pdf.py", filePath]);
+    const python = spawn("python3", ["utiles/parse_pdf.py", filePath]);
 
     let finalData = "";
     let jsonData = null;
@@ -157,17 +157,19 @@ const createLectures = async (req, res) => {
       });
     }
 
+    console.log("COURSE ID : ", COURSE_ID)
+
     // Prepare SQL for bulk insert
     const values = newLectures.map(([title, { start_page, end_page }]) => {
       return `(${COURSE_ID}, ${db.escape(title)}, 0, ${start_page}, ${end_page})`;
     });
 
-    // const sql = `
-    //   INSERT INTO lectures (course_id, title, total_questions, start_page, end_page)
-    //   VALUES ${values.join(",\n")};
-    // `;
+    const sql = `
+      INSERT INTO lectures (course_id, title, total_questions, start_page, end_page)
+      VALUES ${values.join(",\n")};
+    `;
 
-    // await db.execute(sql);
+    await db.execute(sql);
 
     res.json({
       success: true,
